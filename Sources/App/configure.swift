@@ -1,8 +1,7 @@
 import Vapor
 import Foundation
 import Mailgun
-//import FluentPostgreSQL
-//import AppKit
+import FluentMySQL
 
 /// Called before your application initializes.
 ///
@@ -20,9 +19,29 @@ public func configure(
     
     if let mailgunKey = ProcessInfo.processInfo.environment["MAILGUN_KEY"],
             let customMailgunURL = ProcessInfo.processInfo.environment["MAILGUN_URL"] {
-        let mailgunEngine = MailgunStructEngine(apiKey: mailgunKey, customURL: customMailgunURL)
-        services.register(mailgunEngine, as: Mailgun.self)
+        let mailgunEngine = MailgunEngine(apiKey: mailgunKey, customURL: customMailgunURL)
+        services.register(mailgunEngine, as: MailgunProvider.self)
     } else {
         fatalError("Set up your mailgun env variables")
     }
+    
+    try services.register(FluentMySQLProvider())
+    
+    var databaseConfig = DatabaseConfig()
+    let db: MySQLDatabase
+    
+    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
+        let database = MySQLDatabase(databaseURL: databaseURL) {
+        db = database
+    } else {
+        let (username, password, host, database) = ("root", "pass", "localhost", "mailinglist")
+        db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
+    }
+    
+    databaseConfig.add(database: db, as: .mysql)
+    services.register(databaseConfig)
+    
+    var migrationConfig = MigrationConfig()
+    migrationConfig.add(model: User.self, database: .mysql)
+    services.register(migrationConfig)
 }
