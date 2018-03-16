@@ -25,6 +25,18 @@ public func routes(_ router: Router) throws {
         return try mailgunClient.sendMail(data: content, on: req)
     }
     
+    router.on(HTTPMethod.options, at: ["anything"]) { (req) -> Future<HTTPStatus> in
+        return Future(HTTPStatus.ok)
+    }
+   
+    router.on(HTTPMethod.options, at: ["user"]) { (req) -> Future<HTTPStatus> in
+        return Future(HTTPStatus.ok)
+    }
+    
+    router.post("anything") { (req) -> Future<String> in
+        return Future("Hello")
+    }
+    
     router.post("mass_mail") { (req) -> Future<HTTPStatus> in
         let mailgunClient = try req.make(MailgunEngine.self)
         
