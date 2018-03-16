@@ -29,8 +29,13 @@ public func routes(_ router: Router) throws {
         return Future(HTTPStatus.ok)
     }
    
-    router.on(HTTPMethod.options, at: ["user"]) { (req) -> Future<HTTPStatus> in
-        return Future(HTTPStatus.ok)
+    router.on(HTTPMethod.options, at: ["user"]) { (req) -> Future<Response> in
+        return try Future(HTTPStatus.ok).encode(for: req).map(to: Response.self) { (response) in
+            response.http.headers[HTTPHeaderName.accessControlAllowOrigin] = "*"
+            response.http.headers[.accessControlAllowMethods] = "GET,POST,PUT,DELETE,OPTIONS"
+            response.http.headers[.accessControlAllowHeaders] = "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, Access-Control-Allow-Origin"
+            return response
+        }
     }
     
     router.post("anything") { (req) -> Future<String> in
@@ -66,8 +71,11 @@ public func routes(_ router: Router) throws {
         return User.query(on: req).all()
     }
     
-    router.post(User.self, at: "user") { (req, newUser: User) -> Future<User> in
-        return newUser.save(on: req)
+    router.post(User.self, at: "user") { (req, newUser: User) -> Future<Response> in
+        return try newUser.save(on: req).encode(for: req).map(to: Response.self) { (response) in
+            response.http.headers[HTTPHeaderName.accessControlAllowOrigin] = "*"
+            return response
+        }
     }
 }
 
