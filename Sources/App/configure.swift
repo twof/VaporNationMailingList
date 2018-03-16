@@ -33,9 +33,11 @@ public func configure(
     if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
         let database = MySQLDatabase(databaseURL: databaseURL) {
         db = database
+        print("using remote DB")
     } else {
         let (username, password, host, database) = ("root", "pass", "localhost", "mailinglist")
         db = MySQLDatabase(hostname: host, user: username, password: password, database: database)
+        print("using local DB")
     }
     
     databaseConfig.add(database: db, as: .mysql)
