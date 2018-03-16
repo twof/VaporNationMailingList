@@ -30,7 +30,7 @@ public func configure(
     var databaseConfig = DatabaseConfig()
     let db: MySQLDatabase
     
-    if let databaseURL = ProcessInfo.processInfo.environment["DATABASE_URL"],
+    if let databaseURL = ProcessInfo.processInfo.environment["CLEARDB_DATABASE_URL"],
         let database = MySQLDatabase(databaseURL: databaseURL) {
         db = database
         print("using remote DB")
