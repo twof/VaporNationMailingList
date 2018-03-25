@@ -13,54 +13,57 @@ public func routes(_ router: Router) throws {
         return "Hello World"
     }
     
-    router.get("mail") { (req) -> Future<Response> in
-        let content: MailgunFormData = MailgunFormData(
+    router.post("mail") { (req) -> Future<Response> in
+        let content = Mailgun.Message(
             from: "postmaster@twof.me",
             to: "fabiobean2@gmail.com",
             subject: "Newsletter",
             text: "This is a newsletter"
         )
         
-        let mailgunClient = try req.make(MailgunEngine.self)
-        return try mailgunClient.sendMail(data: content, on: req)
+        let mailgunClient = try req.make(Mailgun.self)
+        return try mailgunClient.send(content, on: req).map({ (resp) in
+            print(resp.debugDescription)
+            return resp
+        })
     }
     
-    router.on(HTTPMethod.options, at: ["anything"]) { (req) -> Future<HTTPStatus> in
-        return Future(HTTPStatus.ok)
-    }
-   
-    router.on(HTTPMethod.options, at: ["user"]) { (req) -> Future<Response> in
-        return try Future(HTTPStatus.ok).encode(for: req).map(to: Response.self) { (response) in
-            response.http.headers[HTTPHeaderName.accessControlAllowOrigin] = "*"
-            response.http.headers[.accessControlAllowMethods] = "GET,POST,PUT,DELETE,OPTIONS"
-            response.http.headers[.accessControlAllowHeaders] = "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, Access-Control-Allow-Origin"
-            return response
-        }
-    }
+//    router.on(HTTPMethod.OPTIONS, at: ["anything"]) { (req) in
+//        return HTTPStatus.ok
+//    }
+//   
+//    router.on(HTTPMethod.OPTIONS, at: ["user"]) { (req) in
+//        return try Future(HTTPStatus.ok).encode(for: req).map(to: Response.self) { (response) in
+//            response.http.headers[HTTPHeaderName.accessControlAllowOrigin] = "*"
+//            response.http.headers[.accessControlAllowMethods] = "GET,POST,PUT,DELETE,OPTIONS"
+//            response.http.headers[.accessControlAllowHeaders] = "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, Access-Control-Allow-Origin"
+//            return response
+//        }
+//    }
     
-    router.post("anything") { (req) -> Future<String> in
-        return Future("Hello")
+    router.post("hello") { (req) in
+        return "Hello"
     }
     
     router.post("mass_mail") { (req) -> Future<HTTPStatus> in
-        let mailgunClient = try req.make(MailgunEngine.self)
+        let mailgunClient = try req.make(Mailgun.self)
         
         return User.query(on: req).all().flatMap(to: HTTPStatus.self) { (users) in
             var mailgunFutures: [Future<Response>] = []
             
             for user in users {
-                let content: MailgunFormData = MailgunFormData(
+                let content = Mailgun.Message(
                     from: "postmaster@twof.me",
                     to: user.email,
                     subject: "Newsletter",
                     text: "Hello \(user.name)! This is a newsletter"
                 )
                 
-                let mailgunRequest = try mailgunClient.sendMail(data: content, on: req)
+                let mailgunRequest = try mailgunClient.send(content, on: req)
                 mailgunFutures.append(mailgunRequest)
             }
             
-            return mailgunFutures.flatten().map(to: [Response].self) { (responses) in
+            return mailgunFutures.flatten(on: req).map(to: [Response].self) { (responses) in
                 print(responses)
                 return responses
             }.transform(to: HTTPStatus.ok)
@@ -72,10 +75,7 @@ public func routes(_ router: Router) throws {
     }
     
     router.post(User.self, at: "user") { (req, newUser: User) -> Future<Response> in
-        return try newUser.save(on: req).encode(for: req).map(to: Response.self) { (response) in
-            response.http.headers[HTTPHeaderName.accessControlAllowOrigin] = "*"
-            return response
-        }
+        return try newUser.save(on: req).encode(for: req)
     }
 }
 
